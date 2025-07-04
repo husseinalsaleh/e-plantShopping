@@ -9,6 +9,8 @@ function ProductList({ onHomeClick }) {
     const [showPlants, setShowPlants] = useState(false); // State to control the visibility of the About Us page
     const [addedToCart, setAddedToCart] = useState({});
     const dispatch = useDispatch();
+    const cart = useSelector(state => state.cart.items);
+    const [quantities, setQuantities] = useState({});
 
     const plantsArray = [
         {
@@ -257,12 +259,22 @@ function ProductList({ onHomeClick }) {
         e.preventDefault();
         setShowCart(false);
     };
+    const handleQuantityChange = (plantName, value) => {
+        const quantity = Math.max(1, parseInt(value) || 1);
+        setQuantities(prev => ({ ...prev, [plantName]: quantity }));
+    };
     const handleAddToCart = (product) => {
-        dispatch(addItem(product)); // Dispatch the action to add the product to the cart (Redux action)
-        setAddedToCart((prevState) => ({ // Update the local state to reflect that the product has been added
-            ...prevState, // Spread the previous state to retain existing entries
-            [product.name]: true, // Set the current product's name as a key with value 'true' to mark it as added
+        const quantity = quantities[product.name] || 1;
+        for (let i = 0; i < quantity; i++) {
+            dispatch(addItem(product));
+        }
+        setAddedToCart((prevState) => ({
+            ...prevState,
+            [product.name]: true,
         }));
+    };
+    const getTotalItems = () => {
+        return cart.reduce((sum, item) => sum + item.quantity, 0);
     };
     return (
         <div>
@@ -281,7 +293,25 @@ function ProductList({ onHomeClick }) {
                 </div>
                 <div style={styleObjUl}>
                     <div> <a href="#" onClick={(e) => handlePlantsClick(e)} style={styleA}>Plants</a></div>
-                    <div> <a href="#" onClick={(e) => handleCartClick(e)} style={styleA}><h1 className='cart'><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" id="IconChangeColor" height="68" width="68"><rect width="156" height="156" fill="none"></rect><circle cx="80" cy="216" r="12"></circle><circle cx="184" cy="216" r="12"></circle><path d="M42.3,72H221.7l-26.4,92.4A15.9,15.9,0,0,1,179.9,176H84.1a15.9,15.9,0,0,1-15.4-11.6L32.5,37.8A8,8,0,0,0,24.8,32H8" fill="none" stroke="#faf9f9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" id="mainIconPathAttribute"></path></svg></h1></a></div>
+                    <div style={{ position: 'relative' }}>
+                        <a href="#" onClick={(e) => handleCartClick(e)} style={styleA}>
+                            <h1 className='cart'>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" id="IconChangeColor" height="68" width="68"><rect width="156" height="156" fill="none"></rect><circle cx="80" cy="216" r="12"></circle><circle cx="184" cy="216" r="12"></circle><path d="M42.3,72H221.7l-26.4,92.4A15.9,15.9,0,0,1,179.9,176H84.1a15.9,15.9,0,0,1-15.4-11.6L32.5,37.8A8,8,0,0,0,24.8,32H8" fill="none" stroke="#faf9f9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" id="mainIconPathAttribute"></path></svg>
+                                {getTotalItems() > 0 && (
+                                    <span style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        right: 0,
+                                        background: 'red',
+                                        color: 'white',
+                                        borderRadius: '50%',
+                                        padding: '2px 8px',
+                                        fontSize: '18px',
+                                    }}>{getTotalItems()}</span>
+                                )}
+                            </h1>
+                        </a>
+                    </div>
                 </div>
             </div>
             {!showCart ? (
@@ -303,9 +333,23 @@ function ProductList({ onHomeClick }) {
                                         {/* Display other plant details like description and cost */}
                                         <div className="product-description">{plant.description}</div> {/* Display plant description */}
                                         <div className="product-cost">${plant.cost}</div> {/* Display plant cost */}
+                                        <div style={{ margin: '8px 0' }}>
+                                            <label htmlFor={`quantity-${plant.name}`}>Qty: </label>
+                                            <input
+                                                id={`quantity-${plant.name}`}
+                                                type="number"
+                                                min="1"
+                                                value={quantities[plant.name] || 1}
+                                                onChange={e => handleQuantityChange(plant.name, e.target.value)}
+                                                disabled={!!addedToCart[plant.name]}
+                                                style={{ width: '50px' }}
+                                            />
+                                        </div>
                                         <button
                                             className="product-button"
                                             onClick={() => handleAddToCart(plant)} // Handle adding plant to cart
+                                            disabled={!!addedToCart[plant.name]}
+                                            style={addedToCart[plant.name] ? { backgroundColor: '#ccc', color: '#888', cursor: 'not-allowed' } : {}}
                                         >
                                             {addedToCart[plant.name] ? 'Added to Cart' : 'Add to Cart'}
                                         </button>
